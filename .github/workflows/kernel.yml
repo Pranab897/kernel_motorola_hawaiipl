@@ -1,21 +1,59 @@
-name: CI
+name: Build Motorola Kernel
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-kernel:
-    name: Build Kernel
+  build:
     runs-on: ubuntu-22.04
+
     steps:
-      - name: Build
-        uses: dabao1955/kernel_build_action@main
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install packages
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential \
+            bc \
+            bison \
+            flex \
+            libssl-dev \
+            libelf-dev \
+            git \
+            curl \
+            zip \
+            unzip \
+            python3 \
+            gcc-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi
+
+      - name: Download Proton Clang
+        run: |
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+
+      - name: Build Kernel
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
+
+          mkdir -p out
+
+          make O=out ARCH=arm64 hawaiipl-perd_defconfig
+
+          make -j$(nproc) \
+            O=out \
+            ARCH=arm64 \
+            CC=clang \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+
+      - name: Upload Kernel
+        uses: actions/upload-artifact@v4
         with:
-          kernel-url: https://github.com/motorola-MT6765-devs/kernel_motorola_hawaiipl/
-          kernel-branch: hawaiipl
-          config: hawaiipl-perd_defconfig
-          arch: arm64
-          aosp-gcc: true
-          aosp-clang: true
-          android-version: 12
-          aosp-clang-version: r383902
+          name: kernel
+          path: |
+            out/arch/arm64/boot/Image*
+            out/.config
