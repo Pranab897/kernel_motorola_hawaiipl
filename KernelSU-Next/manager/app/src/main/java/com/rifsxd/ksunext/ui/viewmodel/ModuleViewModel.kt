@@ -14,7 +14,6 @@ import com.rifsxd.ksunext.ui.util.HanziToPinyin
 import com.rifsxd.ksunext.ui.util.getModuleSize
 import com.rifsxd.ksunext.ui.util.listModules
 import com.rifsxd.ksunext.ui.util.zygiskRequired
-import com.rifsxd.ksunext.ui.util.isZygiskImpl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,14 +43,10 @@ class ModuleViewModel : ViewModel() {
         val updateJson: String,
         val hasWebUi: Boolean,
         val hasActionScript: Boolean,
+        val dirId: String,
         val size: Long,
         val banner: String,
-        val zygiskRequired: Boolean,
-        val isMetaModule: Boolean,
-        val actionIconPath: String?,
-        val webUiIconPath: String?,
-        val donate: String,
-        val isZygisk: Boolean,
+        val zygiskRequired: Boolean
     )
 
     data class ModuleUpdateInfo(
@@ -83,7 +78,7 @@ class ModuleViewModel : ViewModel() {
             sortZToA -> compareByDescending { it.name.lowercase() }
             sortSizeLowToHigh -> compareBy { it.size }
             sortSizeHighToLow -> compareByDescending { it.size }
-            else -> compareBy<ModuleInfo> { it.id }
+            else -> compareBy<ModuleInfo> { it.dirId }
         }.thenBy(Collator.getInstance(Locale.getDefault()), ModuleInfo::id)
 
         modules.filter {
@@ -133,15 +128,10 @@ class ModuleViewModel : ViewModel() {
                         .map { array.getJSONObject(it) }
                         .map { obj ->
                             val id = obj.getString("id")
-                            val moduleDir = File("/data/adb/modules/$id")
+                            val dirId = obj.getString("dir_id")
+                            val moduleDir = File("/data/adb/modules/$dirId")
                             val size = getModuleSize(moduleDir)
                             val zygiskRequired = zygiskRequired(moduleDir)
-                            val metaModule =
-                                obj.optInt("metamodule") != 0 ||
-                                obj.optBoolean("metamodule")
-
-                            val isZygisk = isZygiskImpl(moduleDir)
-
 
                             ModuleInfo(
                                 id,
@@ -156,14 +146,10 @@ class ModuleViewModel : ViewModel() {
                                 obj.optString("updateJson"),
                                 obj.optBoolean("web"),
                                 obj.optBoolean("action"),
+                                dirId,
                                 size,
                                 obj.optString("banner"),
-                                zygiskRequired,
-                                metaModule,
-                                obj.optString("actionIcon").takeIf { it.isNotBlank() },
-                                obj.optString("webuiIcon").takeIf { it.isNotBlank() },
-                                obj.optString("donate"),
-                                isZygisk
+                                zygiskRequired
                             )
                         }.toList()
                     isNeedRefresh = false

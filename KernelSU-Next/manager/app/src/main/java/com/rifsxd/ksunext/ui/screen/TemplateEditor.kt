@@ -16,12 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
-import com.rifsxd.ksunext.ui.LocalScrollState
-import com.rifsxd.ksunext.ui.rememberScrollConnection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -33,9 +30,6 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.result.ResultBackNavigator
 import com.rifsxd.ksunext.Natives
 import com.rifsxd.ksunext.R
-import com.rifsxd.ksunext.toRawFlags
-import com.rifsxd.ksunext.toRootProfileFlags
-import com.rifsxd.ksunext.toOrdinalList
 import com.rifsxd.ksunext.ui.component.profile.RootProfileConfig
 import com.rifsxd.ksunext.ui.util.deleteAppProfileTemplate
 import com.rifsxd.ksunext.ui.util.getAppProfileTemplate
@@ -64,20 +58,6 @@ fun TemplateEditorScreen(
     }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
-    // Bottom bar scroll tracking
-    val bottomBarScrollState = LocalScrollState.current
-    val bottomBarScrollConnection = if (bottomBarScrollState != null) {
-        rememberScrollConnection(
-            isScrollingDown = bottomBarScrollState.isScrollingDown,
-            scrollOffset = bottomBarScrollState.scrollOffset,
-            previousScrollOffset = bottomBarScrollState.previousScrollOffset,
-            threshold = 30f
-        )
-    } else null
-
-    val scrollState = LocalScrollState.current
-    val isNavBarHidden = scrollState?.isScrollingDown?.value ?: false
-    val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + if (isNavBarHidden) 0.dp else 112.dp
 
     BackHandler {
         navigator.navigateBack(result = !readOnly)
@@ -127,17 +107,8 @@ fun TemplateEditorScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .let { modifier ->
-                    if (bottomBarScrollConnection != null) {
-                        modifier
-                            .nestedScroll(bottomBarScrollConnection)
-                            .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    } else {
-                        modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-                    }
-                }
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = navBarPadding)
                 .pointerInteropFilter {
                     // disable click and ripple if readOnly
                     readOnly
@@ -205,8 +176,7 @@ fun TemplateEditorScreen(
                         capabilities = it.capabilities,
                         context = it.context,
                         namespace = it.namespace,
-                        rules = it.rules.split("\n"),
-                        flags = it.flags.toRootProfileFlags().toOrdinalList()
+                        rules = it.rules.split("\n")
                     ).run {
                         if (autoSave) {
                             if (!saveTemplate(this)) {
@@ -222,23 +192,14 @@ fun TemplateEditorScreen(
 }
 
 fun toNativeProfile(templateInfo: TemplateViewModel.TemplateInfo): Natives.Profile {
-    val allFlags = Natives.Profile.RootProfileFlag.entries
-
-    val mappedFlags = templateInfo.flags.mapNotNull { ordinal ->
-        if (ordinal in allFlags.indices) allFlags[ordinal] else null
-    }
-
-    return Natives.Profile().copy(
-        rootTemplate = templateInfo.id,
+    return Natives.Profile().copy(rootTemplate = templateInfo.id,
         uid = templateInfo.uid,
         gid = templateInfo.gid,
         groups = templateInfo.groups,
         capabilities = templateInfo.capabilities,
         context = templateInfo.context,
         namespace = templateInfo.namespace,
-        rules = templateInfo.rules.joinToString("\n").ifBlank { "" },
-        flags = mappedFlags.toRawFlags(),
-    )
+        rules = templateInfo.rules.joinToString("\n").ifBlank { "" })
 }
 
 fun isTemplateValid(template: TemplateViewModel.TemplateInfo): Boolean {
