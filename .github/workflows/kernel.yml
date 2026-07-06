@@ -15,19 +15,19 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y \
-          build-essential \
-          bc \
-          bison \
-          flex \
-          libssl-dev \
-          libelf-dev \
-          git \
-          curl \
-          zip \
-          unzip \
-          python3 \
-          gcc-aarch64-linux-gnu \
-          gcc-arm-linux-gnueabi
+            build-essential \
+            bc \
+            bison \
+            flex \
+            libssl-dev \
+            libelf-dev \
+            git \
+            curl \
+            zip \
+            unzip \
+            python3 \
+            gcc-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi
 
       - name: Download Proton Clang
         run: |
